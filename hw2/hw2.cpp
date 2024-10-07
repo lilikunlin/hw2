@@ -1,108 +1,135 @@
-﻿// hw2.cpp : 此檔案包含 'main' 函式。程式會於該處開始執行及結束執行。
-    #include <iostream>
-    #include <stack>
-    #include <string>
-    #include <cctype>
-    #include <sstream>
-    #include <vector>
-    #include <algorithm>
+﻿#include <iostream>
+#include <stack>
+#include <queue>
+#include <string>
+#include <cctype>
+#include <cmath>
 
-    using namespace std;
+using namespace std;
 
-    // 檢查括號是否對稱
-    bool areParenthesesBalanced(const string &expr) {
-        stack<char> s;
-        for (char ch : expr) {
-            if (ch == '(') {
-                s.push(ch);
-            } else if (ch == ')') {
-                if (s.empty()) {
-                    return false;
-                }
-                s.pop();
+// 檢查運算式的括號是否對稱
+bool areParenthesesBalanced(const string& expression) {
+    stack<char> parentheses;
+    for (char ch : expression) {
+        if (ch == '(') {
+            parentheses.push(ch);
+        }
+        else if (ch == ')') {
+            if (parentheses.empty()) {
+                return false; // 多了一個右括號
             }
+            parentheses.pop();
         }
-        return s.empty();
     }
+    return parentheses.empty(); // 確認所有左括號是否被配對
+}
 
-    // 判斷運算子優先順序
-    int precedence(char op) {
-        if (op == '+' || op == '-') return 1;
-        if (op == '*' || op == '/') return 2;
-        return 0;
+// 檢查運算符的優先級
+int precedence(char op) {
+    if (op == '+' || op == '-') return 1;
+    if (op == '*' || op == '/') return 2;
+    return 0;
+}
+
+// 執行基本的數學運算
+int applyOperation(int a, int b, char op) {
+    switch (op) {
+    case '+': return a + b;
+    case '-': return a - b;
+    case '*': return a * b;
+    case '/': return a / b;
+    default: return 0;
     }
+}
 
-    // 中序轉後序
-    string infixToPostfix(const string &expr) {
-        stack<char> s;
-        string postfix;
-        for (char ch : expr) {
-            if (isdigit(ch)) {
-                postfix += ch;
-            } else if (ch == '(') {
-                s.push(ch);
-            } else if (ch == ')') {
-                while (!s.empty() && s.top() != '(') {
-                    postfix += s.top();
-                    s.pop();
-                }
-                s.pop();
-            } else {
-                while (!s.empty() && precedence(s.top()) >= precedence(ch)) {
-                    postfix += s.top();
-                    s.pop();
-                }
-                s.push(ch);
+// 將中序運算式轉換為後序表達式
+string infixToPostfix(const string& expression) {
+    stack<char> operators;
+    queue<char> output;
+    for (char ch : expression) {
+        if (isdigit(ch)) {
+            output.push(ch); // 如果是數字直接加入輸出
+        }
+        else if (ch == '(') {
+            operators.push(ch); // 如果是左括號，壓入棧
+        }
+        else if (ch == ')') {
+            // 如果是右括號，彈出所有操作符直到遇到左括號
+            while (!operators.empty() && operators.top() != '(') {
+                output.push(operators.top());
+                operators.pop();
             }
+            operators.pop(); // 彈出左括號
         }
-        while (!s.empty()) {
-            postfix += s.top();
-            s.pop();
-        }
-        return postfix;
-    }
-
-    // 計算後序表式法的結果
-    int evaluatePostfix(const string &postfix) {
-        stack<int> s;
-        for (char ch : postfix) {
-            if (isdigit(ch)) {
-                s.push(ch - '0');
-            } else {
-                int val2 = s.top(); s.pop();
-                int val1 = s.top(); s.pop();
-                switch (ch) {
-                    case '+': s.push(val1 + val2); break;
-                    case '-': s.push(val1 - val2); break;
-                    case '*': s.push(val1 * val2); break;
-                    case '/': s.push(val1 / val2); break;
-                }
+        else {
+            // 如果是操作符，根據優先級彈出操作符
+            while (!operators.empty() && precedence(operators.top()) >= precedence(ch)) {
+                output.push(operators.top());
+                operators.pop();
             }
+            operators.push(ch);
         }
-        return s.top();
+    }
+    // 彈出剩餘的操作符
+    while (!operators.empty()) {
+        output.push(operators.top());
+        operators.pop();
     }
 
-    int main() {
-        string expr;
-        char cont = 'Y';
-        while (toupper(cont) == 'Y') {
-            cout << "請輸入運算式: ";
-            cin >> expr;
-
-            if (!areParenthesesBalanced(expr)) {
-                cout << expr << " 運算式的括號不對稱，無法繼續運算" << endl;
-            } else {
-                cout << expr << " 運算式的左右括號對稱" << endl;
-                string postfix = infixToPostfix(expr);
-                cout << expr << " 運算式的後序表式法為: " << postfix << endl;
-                int result = evaluatePostfix(postfix);
-                cout << expr << " 運算式的運算結果為: " << result << endl;
-            }
-
-            cout << "是否繼續測試 (Y/N)? ";
-            cin >> cont;
-        }
-        return 0;
+    string postfix = "";
+    while (!output.empty()) {
+        postfix += output.front();
+        output.pop();
     }
+    return postfix;
+}
 
+// 計算後序表達式
+int evaluatePostfix(const string& postfix) {
+    stack<int> values;
+    for (char ch : postfix) {
+        if (isdigit(ch)) {
+            values.push(ch - '0'); // 將字符轉為數字
+        }
+        else {
+            int val2 = values.top(); values.pop();
+            int val1 = values.top(); values.pop();
+            values.push(applyOperation(val1, val2, ch)); // 執行運算
+        }
+    }
+    return values.top();
+}
 
+int main() {
+    string expression;
+    char continueTest;
+
+    do {
+        cout << "請輸入運算式: ";
+        cin >> expression;
+
+        // 檢查括號是否對稱
+        if (!areParenthesesBalanced(expression)) {
+            cout << "此運算式的括號不對稱，無法繼續運算。" << endl;
+        }
+        else {
+            // 括號對稱，開始處理
+            cout << "A. " << expression << " 運算式的左右括號對稱" << endl;
+
+            // 轉換為後序表達式
+            string postfix = infixToPostfix(expression);
+            cout << "B. " << expression << " 運算式的後序表式法為：" << postfix << endl;
+
+            // 計算結果
+            int result = evaluatePostfix(postfix);
+            cout << "C. " << expression << " 運算式的運算結果為：" << result << endl;
+        }
+
+        // 詢問是否繼續
+        cout << "是否繼續測試？ (Y/N): ";
+        cin >> continueTest;
+
+    } while (continueTest == 'Y' || continueTest == 'y');
+
+    return 0;
+}
